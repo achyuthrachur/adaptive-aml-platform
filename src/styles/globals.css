@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --crowe-indigo: #011E41;
+  --crowe-indigo-mid: #002E62;
+  --crowe-blue: #0075C9;
+  --crowe-teal: #05AB8C;
+  --crowe-amber: #F5A800;
+  --crowe-coral: #E5376B;
+  --crowe-purple: #B14FC5;
+  --border-light: #E0E0E0;
+  --text-muted: #828282;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  background: #F8F8F8;
+  min-width: 1280px;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #BDBDBD;
+  border-radius: 3px;
+}
