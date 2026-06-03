@@ -563,16 +563,14 @@ export default function NetworkGraphPage({ nodes, edges }: Props) {
             animationDuration: 1000,
             animationEasing: 'ease-out',
             fit: true,
-            padding: 60,
+            padding: 50,
             nodeDimensionsIncludeLabels: true,
-            idealEdgeLength: 75,
-            nodeRepulsion: 4500,
-            gravity: 0.4,
+            idealEdgeLength: 70,
+            nodeRepulsion: 2048,
+            gravity: 0.85,
             numIter: 2500,
             coolingFactor: 0.95,
-            tileDisconnected: true,
-            tilingPaddingVertical: 20,
-            tilingPaddingHorizontal: 20,
+            tileDisconnected: false,
           } as any} // eslint-disable-line @typescript-eslint/no-explicit-any
           cy={handleCyReady}
           userZoomingEnabled
