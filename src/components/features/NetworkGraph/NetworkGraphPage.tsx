@@ -560,19 +560,19 @@ export default function NetworkGraphPage({ nodes, edges }: Props) {
           layout={{
             name: 'cose-bilkent',
             animate: true,
-            animationDuration: 1200,
+            animationDuration: 1000,
             animationEasing: 'ease-out',
             fit: true,
-            padding: 80,
+            padding: 60,
             nodeDimensionsIncludeLabels: true,
-            idealEdgeLength: 220,
-            nodeRepulsion: 3500,
-            gravity: 0.08,
-            numIter: 3500,
-            coolingFactor: 0.99,
+            idealEdgeLength: 75,
+            nodeRepulsion: 4500,
+            gravity: 0.4,
+            numIter: 2500,
+            coolingFactor: 0.95,
             tileDisconnected: true,
-            tilingPaddingVertical: 60,
-            tilingPaddingHorizontal: 60,
+            tilingPaddingVertical: 20,
+            tilingPaddingHorizontal: 20,
           } as any} // eslint-disable-line @typescript-eslint/no-explicit-any
           cy={handleCyReady}
           userZoomingEnabled
