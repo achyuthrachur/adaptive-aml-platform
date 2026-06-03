@@ -1,61 +1,52 @@
-'use client';
+'use client'
 
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ReferenceLine,
-  ResponsiveContainer,
-} from 'recharts';
-
-interface WeekBucket {
-  week: string;
-  rule_only: number;
-  confirmed: number;
-  model_only: number;
-}
-
-interface HistogramBucket {
-  range: string;
-  count: number;
-}
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, ReferenceLine, ResponsiveContainer,
+} from 'recharts'
 
 interface Props {
-  weekBuckets: WeekBucket[];
-  histogramData: HistogramBucket[];
-  modelOnlyAnnotation: number;
+  weekBuckets: { week: string; rule_only: number; confirmed: number; model_only: number }[]
+  histogramData: { range: string; count: number }[]
+  modelOnlyAnnotation: number
+  ruleCaughtPct: number
 }
 
-export default function OverviewCharts({ weekBuckets, histogramData, modelOnlyAnnotation }: Props) {
+const CustomTooltipDark = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-      {/* Left — Alert Disposition */}
-      <div style={{ backgroundColor: '#011E41', borderRadius: 8, padding: 24 }}>
-        <h3 style={{ color: 'white', fontSize: 14, fontWeight: 600, margin: '0 0 20px' }}>
-          Alert Disposition Breakdown
-        </h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={weekBuckets} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-            <XAxis dataKey="week" tick={{ fill: 'white', fontSize: 12 }} axisLine={{ stroke: 'rgba(255,255,255,0.3)' }} tickLine={false} />
-            <YAxis tick={{ fill: 'white', fontSize: 12 }} axisLine={false} tickLine={false} />
-            <Tooltip
-              contentStyle={{ backgroundColor: '#002E62', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, color: 'white', fontSize: 12 }}
-              labelStyle={{ color: 'white', fontWeight: 600 }}
-            />
+    <div className="rounded-md border border-white/10 bg-[#011E41] p-3 text-xs shadow-card-lg">
+      <p className="font-semibold text-white mb-1.5">{label}</p>
+      {payload.map((p: any) => (
+        <div key={p.name} className="flex items-center gap-2 text-white/80">
+          <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
+          <span>{p.name}: <strong className="text-white">{p.value}</strong></span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export default function OverviewCharts({ weekBuckets, histogramData, modelOnlyAnnotation, ruleCaughtPct }: Props) {
+  return (
+    <div className="grid grid-cols-2 gap-5">
+      {/* Alert Disposition */}
+      <div className="rounded-lg p-5" style={{ background: 'linear-gradient(135deg, #011E41 0%, #01152E 100%)' }}>
+        <div className="mb-1">
+          <h3 className="text-sm font-semibold text-white">Alert Disposition by Week</h3>
+          <p className="text-xs text-white/50 mt-0.5">Amber = est. false positive · Teal = confirmed by model · Blue = model-only catch</p>
+        </div>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={weekBuckets} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+            <XAxis dataKey="week" tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
+            <Tooltip content={<CustomTooltipDark />} />
             <Legend
-              wrapperStyle={{ color: 'white', fontSize: 12, paddingTop: 12 }}
-              formatter={(value) => {
-                const labels: Record<string, string> = {
-                  rule_only: 'Rules Only (Est. FP)',
-                  confirmed: 'Confirmed (Both)',
-                  model_only: 'Model Only',
-                };
-                return labels[value] || value;
+              wrapperStyle={{ fontSize: 11, paddingTop: 12 }}
+              formatter={(v) => {
+                const labels: Record<string, string> = { rule_only: 'Rules-only (est. FP)', confirmed: 'Confirmed by both', model_only: 'Model-only catch' }
+                return <span style={{ color: 'rgba(255,255,255,0.7)' }}>{labels[v] || v}</span>
               }}
             />
             <Bar dataKey="rule_only" stackId="a" fill="#F5A800" name="rule_only" />
@@ -65,30 +56,26 @@ export default function OverviewCharts({ weekBuckets, histogramData, modelOnlyAn
         </ResponsiveContainer>
       </div>
 
-      {/* Right — Risk Score Distribution */}
-      <div style={{ backgroundColor: '#011E41', borderRadius: 8, padding: 24 }}>
-        <h3 style={{ color: 'white', fontSize: 14, fontWeight: 600, margin: '0 0 4px' }}>
-          Risk Score Distribution
-        </h3>
-        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, margin: '0 0 16px' }}>
-          {modelOnlyAnnotation} transactions above 70 not flagged by rules
-        </p>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={histogramData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+      {/* Risk Score Distribution */}
+      <div className="rounded-lg p-5" style={{ background: 'linear-gradient(135deg, #011E41 0%, #01152E 100%)' }}>
+        <div className="mb-1">
+          <h3 className="text-sm font-semibold text-white">ML Risk Score Distribution</h3>
+          <p className="text-xs text-white/50 mt-0.5">
+            {modelOnlyAnnotation} transactions above threshold not caught by rules — rules detected only {ruleCaughtPct}% of high-risk activity
+          </p>
+        </div>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={histogramData} margin={{ top: 16, right: 8, left: 0, bottom: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
             <XAxis
               dataKey="range"
-              tick={{ fill: 'white', fontSize: 10 }}
-              axisLine={{ stroke: 'rgba(255,255,255,0.3)' }}
-              tickLine={false}
-              angle={-30}
-              textAnchor="end"
-              height={45}
+              tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 10 }}
+              axisLine={false} tickLine={false}
+              angle={-35} textAnchor="end" height={44}
             />
-            <YAxis tick={{ fill: 'white', fontSize: 12 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
             <Tooltip
-              contentStyle={{ backgroundColor: '#002E62', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, color: 'white', fontSize: 12 }}
-              labelStyle={{ color: 'white', fontWeight: 600 }}
+              content={<CustomTooltipDark />}
               formatter={(v) => [v, 'Transactions']}
             />
             <Bar dataKey="count" fill="#0075C9" radius={[3, 3, 0, 0]} name="Transactions" />
@@ -96,11 +83,12 @@ export default function OverviewCharts({ weekBuckets, histogramData, modelOnlyAn
               x="70–80"
               stroke="#F5A800"
               strokeWidth={2}
-              label={{ value: 'Rules Threshold', fill: '#F5A800', fontSize: 11, position: 'top' }}
+              strokeDasharray="4 3"
+              label={{ value: '70 · Review threshold', fill: '#F5A800', fontSize: 10, position: 'insideTopRight' }}
             />
           </BarChart>
         </ResponsiveContainer>
       </div>
     </div>
-  );
+  )
 }

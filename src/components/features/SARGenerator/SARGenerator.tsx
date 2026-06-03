@@ -1,293 +1,220 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { Check, RefreshCw } from 'lucide-react';
-import type { Transaction } from '@/types/transaction';
-import type { Customer } from '@/types/customer';
-import { formatCurrency, formatDate, getRiskColor, FEATURE_LABELS } from '@/lib/utils';
+import { useState } from 'react'
+import { Check, RefreshCw, AlertTriangle, FileText, Edit, UserCheck, Send } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import type { Transaction } from '@/types/transaction'
+import type { Customer } from '@/types/customer'
+import { formatCurrency, formatDate, getRiskColor, FEATURE_LABELS, FEATURE_DESCRIPTIONS } from '@/lib/utils'
+import ExplainerBanner from '@/components/ui/ExplainerBanner'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 
 const SEGMENT_LABELS: Record<string, string> = {
-  private_wealth: 'Private Wealth',
-  corporate_treasury: 'Corporate Treasury',
-  correspondent_banking: 'Correspondent Banking',
-  retail: 'Retail',
-};
-
-interface Props {
-  transaction: Transaction;
-  customer: Customer;
+  private_wealth: 'Private Wealth', corporate_treasury: 'Corporate Treasury',
+  correspondent_banking: 'Correspondent Banking', retail: 'Retail',
 }
 
+const NEXT_STEPS = [
+  { icon: FileText, title: 'Review for accuracy', body: 'Verify all facts, amounts, dates, and entities. The AI narrative is a starting point, not a final document.' },
+  { icon: Edit, title: 'Edit as needed', body: 'Add institution-specific context, case numbers, or additional supporting details not captured in the transaction data.' },
+  { icon: UserCheck, title: 'BSA Officer approval', body: 'Obtain signature from a qualified BSA/AML compliance officer before proceeding to filing.' },
+  { icon: Send, title: 'File via FinCEN BSA E-Filing', body: 'Submit through the FinCEN BSA E-Filing System at bsaefiling.fincen.treas.gov. Retain a copy for five years.' },
+]
+
+interface Props { transaction: Transaction; customer: Customer }
+
 export default function SARGenerator({ transaction, customer }: Props) {
-  const [narrative, setNarrative] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [narrative, setNarrative] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
 
-  // Top 3 features by absolute magnitude
-  const featureEntries = Object.entries(transaction.ml_features) as [keyof typeof transaction.ml_features, number][];
-  featureEntries.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
-  const topFeatures = featureEntries.slice(0, 3);
-  const topFeatureStrings = topFeatures.map(([k, v]) => `${FEATURE_LABELS[k] || k}: ${v > 0 ? '+' : ''}${v}`);
-
-  const riskColor = getRiskColor(transaction.ml_score);
+  const featureEntries = Object.entries(transaction.ml_features) as [keyof typeof transaction.ml_features, number][]
+  featureEntries.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+  const topFeatures = featureEntries.slice(0, 3)
+  const topFeatureStrings = topFeatures.map(([k, v]) => `${FEATURE_LABELS[k] || k}: ${v > 0 ? '+' : ''}${v}`)
+  const riskColor = getRiskColor(transaction.ml_score)
 
   async function generateNarrative() {
-    setLoading(true);
-    setError('');
-    setNarrative('');
-
+    setLoading(true); setError(''); setNarrative('')
     try {
       const res = await fetch('/api/sar-narrative', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transaction,
-          customer,
-          topFeatures: topFeatureStrings,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Request failed: ${res.status}`);
-      }
-
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setNarrative(data.narrative || '');
+        body: JSON.stringify({ transaction, customer, topFeatures: topFeatureStrings }),
+      })
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setNarrative(data.narrative || '')
     } catch (err) {
-      setError('Narrative generation failed. Please try again.');
-      console.error(err);
+      setError('Narrative generation failed. Please try again.')
+      console.error(err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   async function copyToClipboard() {
-    await navigator.clipboard.writeText(narrative);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    await navigator.clipboard.writeText(narrative)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', paddingTop: 48 }}>
-      {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#011E41', margin: '0 0 8px' }}>
-          SAR Draft Generator
-        </h1>
+    <div className="max-w-[820px] mx-auto pt-6">
+      <ExplainerBanner
+        title="SAR Draft Generator — AI-assisted, officer-reviewed"
+        insight="This tool drafts a Suspicious Activity Report narrative using GPT-5, guided by the transaction's behavioral risk profile and FinCEN SAR best practices. The draft follows third-person past tense, avoids placeholder fields, and references the specific behavioral indicators that elevated the score. A qualified BSA officer must review and approve before submission."
+        pillars={[
+          { icon: FileText, title: 'GPT-5 Drafting', body: 'Narrative follows FinCEN SAR format: subject description, suspicious activity, behavioral evidence.', color: '#0075C9' },
+          { icon: AlertTriangle, title: 'Officer Review Required', body: 'AI-generated narratives require human review. The tool accelerates drafting, not decision-making.', color: '#F5A800' },
+        ]}
+      />
 
-        <div style={{ fontFamily: 'monospace', fontSize: 13, color: '#828282', marginBottom: 16 }}>
-          {transaction.id}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 16, fontWeight: 600, color: '#011E41' }}>{customer.name}</span>
-          <span style={{
-            backgroundColor: '#EEF2FF', color: '#4F46E5',
-            padding: '2px 10px', borderRadius: 4, fontSize: 12,
-          }}>
-            {SEGMENT_LABELS[customer.segment] || customer.segment}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', gap: 16, fontSize: 13, color: '#828282', flexWrap: 'wrap', marginBottom: 16 }}>
-          <span>{formatCurrency(transaction.amount)}</span>
-          <span style={{ textTransform: 'capitalize', color: transaction.direction === 'outbound' ? '#E5376B' : '#05AB8C' }}>
-            {transaction.direction}
-          </span>
-          <span>{formatDate(transaction.date)}</span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-          <span style={{
-            backgroundColor: riskColor + '22',
-            color: riskColor,
-            padding: '4px 12px',
-            borderRadius: 6,
-            fontSize: 14,
-            fontWeight: 700,
-          }}>
-            ML Score: {transaction.ml_score}
-          </span>
-          {transaction.rule_fired && (
-            <span style={{ backgroundColor: '#FEE2E2', color: '#DC2626', padding: '4px 12px', borderRadius: 6, fontSize: 12, fontWeight: 500 }}>
-              {transaction.rule_label || 'Rule Fired'}
-            </span>
-          )}
-        </div>
-
-        {/* Top feature chips */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {topFeatures.map(([k, v]) => (
-            <span
-              key={k}
-              style={{
-                backgroundColor: '#F5A800',
-                color: '#011E41',
-                padding: '4px 12px',
-                borderRadius: 16,
-                fontSize: 12,
-                fontWeight: 600,
-              }}
-            >
-              {FEATURE_LABELS[k] || k}: {v > 0 ? '+' : ''}{v}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Generate button */}
-      {!narrative && !loading && (
-        <button
-          onClick={generateNarrative}
-          style={{
-            width: '100%',
-            padding: '14px 0',
-            backgroundColor: '#F5A800',
-            color: '#011E41',
-            border: 'none',
-            borderRadius: 8,
-            fontWeight: 700,
-            fontSize: 16,
-            cursor: 'pointer',
-            fontFamily: 'Arial, sans-serif',
-            marginBottom: 24,
-          }}
-        >
-          Generate SAR Draft
-        </button>
-      )}
-
-      {/* Loading state */}
-      {loading && (
-        <div style={{
-          padding: '24px',
-          backgroundColor: '#F8F8F8',
-          border: '1px solid #E0E0E0',
-          borderRadius: 8,
-          marginBottom: 24,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-        }}>
-          <div style={{
-            width: 20, height: 20, borderRadius: '50%',
-            border: '2px solid #F5A800', borderTopColor: 'transparent',
-            animation: 'spin 0.8s linear infinite',
-          }} />
-          <span style={{ color: '#828282', fontSize: 14 }}>Generating narrative...</span>
-        </div>
-      )}
-
-      {/* Error state */}
-      {error && (
-        <div style={{
-          padding: 16,
-          backgroundColor: '#FEE2E2',
-          border: '1px solid #FECACA',
-          borderRadius: 8,
-          marginBottom: 20,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-        }}>
-          <span style={{ color: '#DC2626', fontSize: 13 }}>{error}</span>
-          <button
-            onClick={generateNarrative}
-            style={{
-              padding: '6px 14px',
-              backgroundColor: '#DC2626',
-              color: 'white',
-              border: 'none',
-              borderRadius: 6,
-              fontSize: 12,
-              cursor: 'pointer',
-              fontFamily: 'Arial, sans-serif',
-            }}
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      {/* Narrative output */}
-      {narrative && (
-        <>
-          <div style={{
-            backgroundColor: '#011E41',
-            borderRadius: 8,
-            padding: 32,
-            marginBottom: 16,
-          }}>
-            <p style={{
-              color: 'white',
-              fontSize: 15,
-              lineHeight: 1.7,
-              margin: 0,
-              whiteSpace: 'pre-wrap',
-            }}>
-              {narrative}
-            </p>
+      {/* Transaction header */}
+      <Card className="mb-5">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="font-mono text-xs text-[#828282] mb-1">{transaction.id}</div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-[#011E41] text-lg">{customer.name}</span>
+                <span className="bg-[#EEF2FF] text-[#4338CA] px-2 py-0.5 rounded text-xs font-medium">
+                  {SEGMENT_LABELS[customer.segment]}
+                </span>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="tabular-nums font-bold leading-none mb-0.5" style={{ fontSize: 42, color: riskColor }}>
+                {transaction.ml_score}
+              </div>
+              <div className="text-xs text-[#828282]">Risk Score</div>
+            </div>
+          </div>
+        </CardHeader>
+        <Separator />
+        <CardContent className="pt-3">
+          <div className="flex gap-6 text-sm mb-4 flex-wrap">
+            <div><span className="text-[#828282]">Amount</span><div className="font-semibold tabular-nums text-[#011E41]">{formatCurrency(transaction.amount)}</div></div>
+            <div><span className="text-[#828282]">Direction</span><div className="font-semibold capitalize" style={{ color: transaction.direction === 'outbound' ? '#E5376B' : '#05AB8C' }}>{transaction.direction}</div></div>
+            <div><span className="text-[#828282]">Date</span><div className="font-semibold text-[#011E41]">{formatDate(transaction.date)}</div></div>
+            <div><span className="text-[#828282]">Counterparty</span><div className="font-semibold text-[#011E41]">{transaction.counterparty_jurisdiction}</div></div>
           </div>
 
-          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-            <button
-              onClick={copyToClipboard}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '10px 20px',
-                backgroundColor: 'white',
-                color: '#011E41',
-                border: '1px solid #011E41',
-                borderRadius: 6,
-                fontWeight: 600,
-                fontSize: 13,
-                cursor: 'pointer',
-                fontFamily: 'Arial, sans-serif',
-              }}
-            >
-              {copied ? <Check size={16} color="#05AB8C" /> : null}
-              {copied ? 'Copied!' : 'Copy to Clipboard'}
-            </button>
-
-            <button
-              onClick={generateNarrative}
-              disabled={loading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '10px 20px',
-                backgroundColor: '#F5A800',
-                color: '#011E41',
-                border: 'none',
-                borderRadius: 6,
-                fontWeight: 600,
-                fontSize: 13,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontFamily: 'Arial, sans-serif',
-              }}
-            >
-              <RefreshCw size={14} />
-              Regenerate
-            </button>
+          {/* Top feature chips */}
+          <div>
+            <div className="text-xs text-[#828282] mb-2 font-medium">Primary risk drivers</div>
+            <TooltipProvider delayDuration={200}>
+              <div className="flex flex-wrap gap-2">
+                {topFeatures.map(([k, v]) => (
+                  <Tooltip key={k}>
+                    <TooltipTrigger asChild>
+                      <span className="bg-[#FFF3CC] text-[#7A4F00] border border-[#F5A800]/30 px-3 py-1 rounded-full text-xs font-semibold cursor-help">
+                        {FEATURE_LABELS[k]}: {v > 0 ? '+' : ''}{v}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent><p className="font-semibold mb-0.5">{FEATURE_LABELS[k]}</p><p className="text-slate-300">{FEATURE_DESCRIPTIONS[k]}</p></TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            </TooltipProvider>
           </div>
+        </CardContent>
+      </Card>
 
-          <p style={{ color: '#828282', fontSize: 12, margin: 0 }}>
-            This narrative is AI-generated and requires review by a qualified BSA officer before submission.
-          </p>
-        </>
-      )}
+      {/* Generate / Loading / Output */}
+      <AnimatePresence mode="wait">
+        {!narrative && !loading && !error && (
+          <motion.div key="btn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <Button variant="amber" className="w-full h-11 text-base" onClick={generateNarrative}>
+              Generate SAR Draft
+            </Button>
+          </motion.div>
+        )}
 
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+        {loading && (
+          <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <div className="rounded-lg p-6" style={{ background: 'linear-gradient(135deg, #011E41 0%, #01152E 100%)' }}>
+              <div className="text-xs text-white/50 mb-3 font-medium">Generating narrative…</div>
+              <Skeleton className="h-4 w-full mb-2" style={{ background: 'rgba(255,255,255,0.08)' }} />
+              <Skeleton className="h-4 w-[92%] mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
+              <Skeleton className="h-4 w-[85%] mb-2" style={{ background: 'rgba(255,255,255,0.05)' }} />
+              <Skeleton className="h-4 w-[90%] mb-2" style={{ background: 'rgba(255,255,255,0.06)' }} />
+              <Skeleton className="h-4 w-[78%]" style={{ background: 'rgba(255,255,255,0.04)' }} />
+            </div>
+          </motion.div>
+        )}
+
+        {error && (
+          <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Generation failed</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <Button variant="outline" onClick={generateNarrative}>Retry</Button>
+          </motion.div>
+        )}
+
+        {narrative && (
+          <motion.div key="output" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+            {/* Narrative */}
+            <div className="rounded-lg p-6 mb-4" style={{ background: 'linear-gradient(135deg, #011E41 0%, #01152E 100%)' }}>
+              <p className="text-white text-sm leading-[1.8] whitespace-pre-wrap">{narrative}</p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 mb-4">
+              <Button variant="outline" onClick={copyToClipboard} className="flex items-center gap-2">
+                {copied ? <><Check size={14} className="text-[#05AB8C]" /> Copied!</> : 'Copy to Clipboard'}
+              </Button>
+              <Button variant="amber" onClick={generateNarrative} disabled={loading} className="flex items-center gap-2">
+                <RefreshCw size={14} /> Regenerate
+              </Button>
+            </div>
+
+            {/* Disclaimer */}
+            <Alert variant="warning" className="mb-5">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Review required before submission</AlertTitle>
+              <AlertDescription>
+                This narrative is AI-generated by GPT-5 and requires review and approval by a qualified BSA/AML compliance officer before submission to FinCEN. Do not submit without human review.
+              </AlertDescription>
+            </Alert>
+
+            {/* Next steps */}
+            <Card>
+              <CardHeader><CardTitle>What to do next</CardTitle></CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  {NEXT_STEPS.map((step, i) => {
+                    const Icon = step.icon
+                    return (
+                      <div key={i} className="flex items-start gap-3">
+                        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#F0F4F8] text-xs font-bold text-[#011E41]">
+                          {i + 1}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-[#011E41] flex items-center gap-1.5">
+                            <Icon size={13} className="text-[#828282]" />{step.title}
+                          </div>
+                          <div className="text-xs text-[#828282] mt-0.5 leading-relaxed">{step.body}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
-  );
+  )
 }

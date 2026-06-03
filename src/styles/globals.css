@@ -2,41 +2,94 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --crowe-indigo: #011E41;
-  --crowe-indigo-mid: #002E62;
-  --crowe-blue: #0075C9;
-  --crowe-teal: #05AB8C;
-  --crowe-amber: #F5A800;
-  --crowe-coral: #E5376B;
-  --crowe-purple: #B14FC5;
-  --border-light: #E0E0E0;
-  --text-muted: #828282;
+@layer base {
+  :root {
+    /* Shadcn CSS variables — mapped to Crowe light palette */
+    --background: 0 0% 100%;
+    --foreground: 215 97% 8%; /* #011E41 */
+    --card: 0 0% 100%;
+    --card-foreground: 215 97% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 97% 8%;
+    --primary: 215 97% 8%; /* Crowe Indigo */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 215 97% 8%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 0 0% 51%; /* #828282 */
+    --accent: 37 100% 48%; /* #F5A800 Amber */
+    --accent-foreground: 215 97% 8%;
+    --destructive: 340 79% 56%; /* #E5376B Coral */
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 88%; /* #E0E0E0 */
+    --input: 0 0% 88%;
+    --ring: 215 97% 8%;
+    --radius: 0.5rem;
+
+    /* Crowe brand direct refs */
+    --crowe-indigo: #011E41;
+    --crowe-indigo-mid: #002E62;
+    --crowe-blue: #0075C9;
+    --crowe-teal: #05AB8C;
+    --crowe-amber: #F5A800;
+    --crowe-coral: #E5376B;
+    --crowe-purple: #B14FC5;
+    --border-light: #E0E0E0;
+    --text-muted: #828282;
+  }
 }
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  font-family: Arial, sans-serif;
-  font-size: 14px;
-  background: #F8F8F8;
-  min-width: 1280px;
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    background: #F8F9FB;
+    min-width: 1280px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Tabular numbers for all financial data */
+  .tabular-nums {
+    font-feature-settings: "tnum";
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Smooth transitions globally */
+  button, a, [role="button"] {
+    @apply transition-all duration-150;
+  }
 }
 
 /* Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #BDBDBD; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #828282; }
+
+/* Shimmer skeleton */
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+
+/* Fade up animation */
+.animate-fade-up {
+  animation: fade-up 0.3s ease-out both;
 }
-::-webkit-scrollbar-thumb {
-  background: #BDBDBD;
-  border-radius: 3px;
+
+/* Staggered children */
+.stagger-children > * {
+  animation: fade-up 0.3s ease-out both;
 }
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
