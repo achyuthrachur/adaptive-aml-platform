@@ -112,7 +112,9 @@ export default function DataIngestionWizard() {
           <button onClick={() => router.push('/')} className="text-white/40 hover:text-white/70 transition-colors">
             <ChevronLeft size={18} />
           </button>
-          <Image src="/crowe-logo-white.svg" alt="Crowe" width={80} height={22} className="h-5 w-auto opacity-70" />
+          <button onClick={() => router.push('/')} className="cursor-pointer">
+            <Image src="/crowe-logo-white.svg" alt="Crowe" width={80} height={22} className="h-5 w-auto opacity-70 hover:opacity-100 transition-opacity" />
+          </button>
           <span className="text-sm text-white/30">/ Connect Data Source</span>
         </div>
         <button onClick={() => router.push('/overview')}

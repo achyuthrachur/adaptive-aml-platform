@@ -97,7 +97,9 @@ export default function LandingPage() {
         className="sticky top-0 z-50 flex items-center justify-between px-8 py-4 backdrop-blur-md"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', backgroundColor: 'rgba(5,14,26,0.85)' }}
       >
-        <Image src="/crowe-logo-white.svg" alt="Crowe" width={96} height={26} className="h-6 w-auto" />
+        <button onClick={() => router.push('/')} className="cursor-pointer">
+          <Image src="/crowe-logo-white.svg" alt="Crowe" width={96} height={26} className="h-6 w-auto" />
+        </button>
         <div className="flex items-center gap-4">
           <span className="text-sm text-white/40 hidden md:block">Adaptive AML Intelligence Platform</span>
           <motion.button
