@@ -229,19 +229,19 @@ export default function NetworkGraphPage({ nodes, edges }: Props) {
   const layoutConfig = {
     name: 'cose-bilkent',
     animate: true,
-    animationDuration: 1400,
+    animationDuration: 1200,
     animationEasing: 'ease-out',
     fit: true,
-    padding: 80,
+    padding: 40,
     nodeDimensionsIncludeLabels: true,
-    idealEdgeLength: 110,
-    nodeRepulsion: 5500,
-    gravity: 0.22,
-    numIter: 3500,
-    coolingFactor: 0.97,
+    idealEdgeLength: 55,
+    nodeRepulsion: 2800,
+    gravity: 0.55,
+    numIter: 2500,
+    coolingFactor: 0.95,
     tileDisconnected: true,
-    tilingPaddingVertical: 110,
-    tilingPaddingHorizontal: 110,
+    tilingPaddingVertical: 10,
+    tilingPaddingHorizontal: 10,
   }
 
   // Mount Cytoscape directly — bypasses react-cytoscapejs React 18 compatibility issue
@@ -251,60 +251,95 @@ export default function NetworkGraphPage({ nodes, edges }: Props) {
     let cy: any = null // eslint-disable-line @typescript-eslint/no-explicit-any
 
     const init = async () => {
-      const [cytoscapeModule, coseBilkentModule] = await Promise.all([
-        import('cytoscape'),
-        import('cytoscape-cose-bilkent'),
-      ])
-      if (!mounted || !graphRef.current) return
+      try {
+        const [cytoscapeModule, coseBilkentModule] = await Promise.all([
+          import('cytoscape'),
+          import('cytoscape-cose-bilkent'),
+        ])
+        if (!mounted || !graphRef.current) return
 
-      const cytoscape = cytoscapeModule.default
-      try { cytoscape.use(coseBilkentModule.default) } catch { /* already registered */ }
+        const cytoscape = cytoscapeModule.default
+        try { cytoscape.use(coseBilkentModule.default) } catch { /* already registered */ }
 
-      cy = cytoscape({
-        container: graphRef.current,
-        elements: buildElements(),
-        style: buildStylesheet(false) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-        layout: layoutConfig as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-        userZoomingEnabled: true,
-        userPanningEnabled: true,
-        autoungrabify: false,
-      })
-
-      cyRef.current = cy
-      setIsLoading(false)
-
-      cy.on('layoutstop', () => {
-        setTimeout(() => cy.fit(cy.elements(), 80), 60)
-      })
-      cy.on('tap', 'node', (evt: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-        setSelectedNode(nodes.find(n => n.id === evt.target.id()) || null)
-      })
-      cy.on('tap', (evt: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-        if (evt.target === cy) setSelectedNode(null)
-      })
-      cy.on('mouseover', 'edge', (evt: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-        evt.target.style({ 'line-color': 'rgba(255,255,255,0.5)', width: 3, opacity: 1 })
-        const edge = edges.find(e => e.id === evt.target.id()) || null
-        if (edge) {
-          setHoveredEdge(edge)
-          if (graphRef.current) {
-            const rect = graphRef.current.getBoundingClientRect()
-            const pan = cy.pan(), zoom = cy.zoom()
-            const mid = evt.target.midpoint()
-            setHoverPos({ x: mid.x * zoom + pan.x + rect.left, y: mid.y * zoom + pan.y + rect.top })
-          }
-        }
-      })
-      cy.on('mouseout', 'edge', (evt: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-        const isLayering = evt.target.data('is_layering_path')
-        const isHighFreq = evt.target.data('_isHighFreq')
-        evt.target.style({
-          'line-color': isLayering ? '#E5376B' : isHighFreq ? '#F5A800' : 'rgba(255,255,255,0.14)',
-          width: isLayering || isHighFreq ? 3 : 1.5,
-          opacity: isLayering ? 1 : 0.8,
+        cy = cytoscape({
+          container: graphRef.current,
+          elements: buildElements(),
+          style: buildStylesheet(false) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+          layout: layoutConfig as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+          userZoomingEnabled: true,
+          userPanningEnabled: true,
+          autoungrabify: false,
         })
-        setHoveredEdge(null); setHoverPos(null)
-      })
+
+        cyRef.current = cy
+        if (mounted) setIsLoading(false)
+
+        cy.on('layoutstop', () => {
+          // Redistribute disconnected components evenly across the canvas
+          const comps = cy.elements().components()
+          if (comps.length > 1 && graphRef.current) {
+            const canvasW = graphRef.current.offsetWidth
+            const canvasH = graphRef.current.offsetHeight
+            const cols = comps.length <= 3 ? comps.length : Math.ceil(Math.sqrt(comps.length))
+            const rows = Math.ceil(comps.length / cols)
+            const pad = 60
+            const cellW = (canvasW - pad * 2) / cols
+            const cellH = (canvasH - pad * 2) / rows
+
+            // Sort components largest-first so biggest cluster goes top-left
+            const sorted = [...comps].sort((a: any, b: any) => b.length - a.length)
+
+            sorted.forEach((comp: any, i: number) => {
+              const row = Math.floor(i / cols)
+              const col = i % cols
+              const targetX = pad + col * cellW + cellW / 2
+              const targetY = pad + row * cellH + cellH / 2
+              const bb = comp.boundingBox({ includeLabels: false })
+              const cx = (bb.x1 + bb.x2) / 2
+              const cy2 = (bb.y1 + bb.y2) / 2
+              const dx = targetX - cx
+              const dy = targetY - cy2
+              comp.nodes().forEach((n: any) => {
+                const p = n.position()
+                n.position({ x: p.x + dx, y: p.y + dy })
+              })
+            })
+          }
+          setTimeout(() => cy.fit(cy.elements(), 24), 80)
+        })
+        cy.on('tap', 'node', (evt: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+          setSelectedNode(nodes.find(n => n.id === evt.target.id()) || null)
+        })
+        cy.on('tap', (evt: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+          if (evt.target === cy) setSelectedNode(null)
+        })
+        cy.on('mouseover', 'edge', (evt: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+          evt.target.style({ 'line-color': 'rgba(255,255,255,0.5)', width: 3, opacity: 1 })
+          const edge = edges.find(e => e.id === evt.target.id()) || null
+          if (edge) {
+            setHoveredEdge(edge)
+            if (graphRef.current) {
+              const rect = graphRef.current.getBoundingClientRect()
+              const pan = cy.pan(), zoom = cy.zoom()
+              const mid = evt.target.midpoint()
+              setHoverPos({ x: mid.x * zoom + pan.x + rect.left, y: mid.y * zoom + pan.y + rect.top })
+            }
+          }
+        })
+        cy.on('mouseout', 'edge', (evt: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+          const isLayering = evt.target.data('is_layering_path')
+          const isHighFreq = evt.target.data('_isHighFreq')
+          evt.target.style({
+            'line-color': isLayering ? '#E5376B' : isHighFreq ? '#F5A800' : 'rgba(255,255,255,0.14)',
+            width: isLayering || isHighFreq ? 3 : 1.5,
+            opacity: isLayering ? 1 : 0.8,
+          })
+          setHoveredEdge(null); setHoverPos(null)
+        })
+      } catch (err) {
+        console.error('[NetworkGraph] Cytoscape init error:', err)
+        if (mounted) setIsLoading(false)
+      }
     }
 
     init()
@@ -336,7 +371,7 @@ export default function NetworkGraphPage({ nodes, edges }: Props) {
       ))
     : []
 
-  const fitAll = () => cyRef.current?.fit(cyRef.current.elements(), 80)
+  const fitAll = () => cyRef.current?.fit(cyRef.current.elements(), 30)
   const zoomIn = () => { const cy = cyRef.current; if (cy) { cy.zoom(cy.zoom() * 1.3); cy.center() } }
   const zoomOut = () => { const cy = cyRef.current; if (cy) { cy.zoom(cy.zoom() * 0.75); cy.center() } }
 
