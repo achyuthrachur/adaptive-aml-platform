@@ -234,9 +234,9 @@ export default function NetworkGraphPage({ nodes, edges }: Props) {
     fit: true,
     padding: 40,
     nodeDimensionsIncludeLabels: true,
-    idealEdgeLength: 82,
-    nodeRepulsion: 4200,
-    gravity: 0.38,
+    idealEdgeLength: 68,
+    nodeRepulsion: 3600,
+    gravity: 0.44,
     numIter: 2500,
     coolingFactor: 0.95,
     tileDisconnected: true,
@@ -275,18 +275,18 @@ export default function NetworkGraphPage({ nodes, edges }: Props) {
         if (mounted) setIsLoading(false)
 
         cy.on('layoutstop', () => {
-          // Redistribute disconnected components evenly across the canvas
+          // Redistribute disconnected components evenly, scaling oversized clusters to fit their cell
           const comps = cy.elements().components()
           if (comps.length > 1 && graphRef.current) {
             const canvasW = graphRef.current.offsetWidth
             const canvasH = graphRef.current.offsetHeight
             const cols = comps.length <= 3 ? comps.length : Math.ceil(Math.sqrt(comps.length))
             const rows = Math.ceil(comps.length / cols)
-            const pad = 80
+            const pad = 55
             const cellW = (canvasW - pad * 2) / cols
             const cellH = (canvasH - pad * 2) / rows
+            const cellMargin = 0.82 // use 82% of each cell so edges between clusters stay clear
 
-            // Sort components largest-first so biggest cluster goes top-left
             const sorted = [...comps].sort((a: any, b: any) => b.length - a.length)
 
             sorted.forEach((comp: any, i: number) => {
@@ -295,17 +295,25 @@ export default function NetworkGraphPage({ nodes, edges }: Props) {
               const targetX = pad + col * cellW + cellW / 2
               const targetY = pad + row * cellH + cellH / 2
               const bb = comp.boundingBox({ includeLabels: true })
+              const compW = bb.x2 - bb.x1
+              const compH = bb.y2 - bb.y1
               const cx = (bb.x1 + bb.x2) / 2
               const cy2 = (bb.y1 + bb.y2) / 2
-              const dx = targetX - cx
-              const dy = targetY - cy2
+
+              // Scale down if the cluster is wider/taller than the allocated cell area
+              const maxW = cellW * cellMargin
+              const maxH = cellH * cellMargin
+              const scale = Math.min(1, maxW / Math.max(compW, 1), maxH / Math.max(compH, 1))
+
               comp.nodes().forEach((n: any) => {
                 const p = n.position()
-                n.position({ x: p.x + dx, y: p.y + dy })
+                const newX = cx + (p.x - cx) * scale + (targetX - cx)
+                const newY = cy2 + (p.y - cy2) * scale + (targetY - cy2)
+                n.position({ x: newX, y: newY })
               })
             })
           }
-          setTimeout(() => cy.fit(cy.elements(), 24), 80)
+          setTimeout(() => cy.fit(cy.elements(), 20), 80)
         })
         cy.on('tap', 'node', (evt: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
           setSelectedNode(nodes.find(n => n.id === evt.target.id()) || null)

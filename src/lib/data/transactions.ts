@@ -1,11 +1,12 @@
-import { generateCustomers, generateTransactions } from './seed';
+import { generateTransactions } from './seed';
+import { getCustomers } from './customers';
 import type { Transaction } from '@/types/transaction';
 
 let _transactions: Transaction[] | null = null;
 
 function getAll(): Transaction[] {
   if (!_transactions) {
-    const customers = generateCustomers();
+    const customers = getCustomers();
     _transactions = generateTransactions(customers);
   }
   return _transactions;

@@ -1,64 +1,39 @@
 # HANDOFF — Adaptive AML Monitoring Platform
 
-## Status
-**Production-deployed and complete.** All 7 screens built, UI polished, Crowe-branded, deployed to Vercel with GitHub CI.
+## Status: Network Graph Goal Completed ✅
 
-**Live URL:** https://adaptive-aml-platform.vercel.app  
-**GitHub:** https://github.com/achyuthrachur/adaptive-aml-platform
+## What Was Done This Session
 
----
+### Root Cause Fixed: react-cytoscapejs React 18 incompatibility
+The network graph had a pre-existing `TypeError: n is not a function` on every page load. Root cause: `react-cytoscapejs` 2.0.0 is a class component that relies on `defaultProps` to provide the `diff` callback. In React 18.3, this callback wasn't being passed correctly into `componentDidMount`, so the `diff` function was `undefined` when `updateCytoscape` destructured it from `this.props`.
 
-## What Was Built
+**Fix**: Replaced `react-cytoscapejs` entirely with a direct `useEffect` + `useRef` Cytoscape mount. Cytoscape is imported dynamically inside the effect, the instance is created on a `<div ref={graphRef}>`, and separate effects handle element/stylesheet updates when filters or layering state change.
 
-### Platform (Goldman Sachs RFP demo)
-Next.js 14 + TypeScript + Tailwind + shadcn/ui + Recharts + Cytoscape.js + Framer Motion + OpenAI (gpt-5). 100% synthetic data via `seedrandom` — deterministic, no real customer data.
+### Visual Improvements Delivered
+- **Better layout**: `tileDisconnected: true`, `idealEdgeLength: 110`, `nodeRepulsion: 5500`, `gravity: 0.22` — three distinct clusters now spread across the canvas
+- **Label readability**: `text-background-color/opacity/padding/shape` CSS properties give each label a dark semi-transparent pill background
+- **"How to read this graph"** collapsible accordion in sidebar — 6 entries with visual previews (inline shapes/SVG arrows) and plain-English explanations for non-experts
+- **Edge hover tooltip** — hovering any transaction line shows volume, frequency count, and plain-English description of what that edge type means
+- **Canvas chrome**: "Transaction Network" title banner (top-left), guide strip (bottom center), animated loading dots
+- **Filter labels** say "Customers (circles)" and "Counterparties (diamonds)" to reinforce visual vocabulary
 
-### 7 Screens
-| Route | Screen |
-|---|---|
-| `/overview` | KPI cards + stacked bar + ML score histogram + how-model-works section |
-| `/customers` | TanStack table, shadcn filters, risk badges, empty states |
-| `/customers/[id]` | Volume line chart, corridor heatmap, tx type donut, drift area, 20-row tx table |
-| `/transactions` | SHAP feature attribution bars (animated), collapsible explainer, SAR button |
-| `/network` | Cytoscape.js dark canvas, cose-bilkent layout, 3 risk patterns, collapsible sidebar |
-| `/comparison` | Rules vs model side-by-side, connector lines, ExplainerBanner |
-| `/sar/[id]` | OpenAI gpt-5 SAR narrative, Skeleton loader, next-steps guide |
+## Files Touched
+- `src/components/features/NetworkGraph/NetworkGraphPage.tsx` — full rewrite (456 insertions)
 
-### Architecture
-- **Data**: `src/lib/data/seed.ts` — 50 customers, ~3000+ transactions, 3 explicit network patterns
-- **Types**: `src/types/` — Customer, Transaction, NetworkNode, NetworkEdge
-- **Shared UI**: `src/components/ui/` — ExplainerBanner, TermTooltip, MetricCard, RiskBadge + full shadcn primitives
-- **API**: `src/app/api/sar-narrative/route.ts` — OpenAI gpt-5, server-side only
-
----
-
-## Key Decisions
-- **OpenAI API** (not Anthropic) — user instruction
-- **gpt-5** model for SAR narrative
-- **cose-bilkent** layout: `gravity: 0.85, tileDisconnected: false, idealEdgeLength: 70` — tuned for ~50 nodes
-- **shadcn/ui** built manually (corporate proxy blocks the shadcn CDN)
-- **Radix UI** installed directly as deps instead of shadcn CLI
-- **System font stack** (Segoe UI → Arial) — Google Fonts blocked by corporate proxy
-- **Crowe Root CA** exported to `$APPDATA/crowe-ca.pem` for Vercel CLI SSL fix
-- **Base font size**: 15px (bumped from 13px after demo feedback)
-
----
-
-## Environment
-- `.env.local` — `OPENAI_API_KEY` set (do not commit)
-- Vercel env var `OPENAI_API_KEY` set in production
-- GitHub linked to Vercel — every push to `main` auto-deploys
-
----
+## Commits This Session
+- `7f70322` — Fix network graph: replace react-cytoscapejs with direct useEffect mount
 
 ## What To Do Next
-- Test network graph layout at various screen sizes — may need further gravity/repulsion tuning
-- Consider adding a `next-env.d.ts` to `.gitignore` (currently committed)
-- Optional: add `cytoscape-layout-utilities` for more precise cluster positioning
-- Optional: upgrade from Next.js 14.2.29 (has known security advisory)
+1. Push + deploy: `git push && vercel --prod`
+2. `CustomerProfileClient.tsx` — hasn't received the enterprise dark-header treatment
+3. `SARGenerator.tsx` — has Phase 4 skeleton but no dark-header rework
+4. After those: final build + demo walkthrough
 
 ## Verify Command
-```
+```bash
 npm run dev
-# open http://localhost:3000
+# Navigate to localhost:3000/network
+# Should show: dark canvas, 3 distinct clusters, readable labels
+# Sidebar: "How to read this graph" accordion, pattern explanations
+# Hover any edge: tooltip with volume + frequency + explanation
 ```
