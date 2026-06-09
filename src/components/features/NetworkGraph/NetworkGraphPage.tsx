@@ -234,9 +234,9 @@ export default function NetworkGraphPage({ nodes, edges }: Props) {
     fit: true,
     padding: 40,
     nodeDimensionsIncludeLabels: true,
-    idealEdgeLength: 55,
-    nodeRepulsion: 2800,
-    gravity: 0.55,
+    idealEdgeLength: 82,
+    nodeRepulsion: 4200,
+    gravity: 0.38,
     numIter: 2500,
     coolingFactor: 0.95,
     tileDisconnected: true,
@@ -282,7 +282,7 @@ export default function NetworkGraphPage({ nodes, edges }: Props) {
             const canvasH = graphRef.current.offsetHeight
             const cols = comps.length <= 3 ? comps.length : Math.ceil(Math.sqrt(comps.length))
             const rows = Math.ceil(comps.length / cols)
-            const pad = 60
+            const pad = 80
             const cellW = (canvasW - pad * 2) / cols
             const cellH = (canvasH - pad * 2) / rows
 
@@ -294,7 +294,7 @@ export default function NetworkGraphPage({ nodes, edges }: Props) {
               const col = i % cols
               const targetX = pad + col * cellW + cellW / 2
               const targetY = pad + row * cellH + cellH / 2
-              const bb = comp.boundingBox({ includeLabels: false })
+              const bb = comp.boundingBox({ includeLabels: true })
               const cx = (bb.x1 + bb.x2) / 2
               const cy2 = (bb.y1 + bb.y2) / 2
               const dx = targetX - cx
